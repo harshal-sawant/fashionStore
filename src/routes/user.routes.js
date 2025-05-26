@@ -14,10 +14,6 @@ router.route("/register").post(
     registerUser
     )
 
-    router.route("/getusers").get(
-        getUsers
-        )
-
 // router.route("/login").post(loginUser)
 
 // //secured routes

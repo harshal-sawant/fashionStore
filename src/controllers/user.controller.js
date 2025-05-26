@@ -13,29 +13,48 @@ const registerUser = asyncHandler( async (req, res) => {
     console.log('Register user')
 
 
-    const { username} = req.body
-    //console.log("email: ", email);
+    const { username, name, email, password, contactNumber, address } = req.body
 
+    // Validate all required fields
     if (
-        [username].some((field) => field?.trim() === "")
+        [username, name, email, password, contactNumber].some((field) => field?.trim() === "") ||
+        !address || [address.street, address.city, address.state, address.country, address.pincode].some((field) => field?.trim() === "")
     ) {
         throw new ApiError(400, "All fields are required")
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+        throw new ApiError(400, "Invalid email format")
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+        throw new ApiError(400, "Password must be at least 6 characters long")
+    }
+
+    // Validate contact number format
+    const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/
+    if (!phoneRegex.test(contactNumber)) {
+        throw new ApiError(400, "Invalid contact number format")
+    }
+
     const existedUser = await User.findOne({
-        $or: [{ username }]
+        $or: [{ username }, { email }]
     })
 
     if (existedUser) {
         throw new ApiError(409, "User with email or username already exists")
     }
-    //console.log(req.files);
-
-    
-   
 
     const user = await User.create({
-        username: username.toLowerCase()
+        username: username.toLowerCase(),
+        name,
+        email: email.toLowerCase(),
+        password,
+        contactNumber,
+        address
     })
 
     const createdUser = await User.findById(user._id)
