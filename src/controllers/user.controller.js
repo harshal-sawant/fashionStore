@@ -25,9 +25,6 @@ const generateAccessAndRefereshTokens = async(userId) =>{
 
 
 const registerUser = asyncHandler( async (req, res) => {
-    console.log('Register user')
-
-
     const { username, name, email, password, contactNumber, address } = req.body
 
     // Validate all required fields
@@ -84,19 +81,12 @@ const registerUser = asyncHandler( async (req, res) => {
 
 } )
 
-const getUsers =  async (req, res) => {
-    try {
-        
-        console.log('getUsers');
-        const userData = await User.find();
-        res.json(userData);
-    } catch (error) {
-        console.error('Error fetching users:', error);
-    }
-};
+const getUsers = asyncHandler( async (req, res) => {
+    const userData = await User.find();
+    res.json(userData);
+});
 
 const loginUser = asyncHandler(async (req, res) => {
-    console.log('login', req);
     const { email, username, password } = req.body;
 
     // Check if either email or username is provided
@@ -111,7 +101,7 @@ const loginUser = asyncHandler(async (req, res) => {
     // Find user by email or username
     const user = await User.findOne({
         $or: [{ email }, { username }]
-    });
+    }).select("+password"); // Add this .select("+password")
 
     if (!user) {
         throw new ApiError(401, "Invalid credentials");
