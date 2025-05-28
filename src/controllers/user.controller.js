@@ -25,7 +25,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, name, email, password, contactNumber, address } = req.body;
+  const { username, name, email, password, contactNumber, address, role } = req.body;
 
   // Validate all required fields
   if (
@@ -62,6 +62,11 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid contact number format");
   }
 
+  // Validate role if provided
+  if (role && !["admin", "customer"].includes(role)) {
+    throw new ApiError(400, "Invalid role. Role must be either 'admin' or 'customer'");
+  }
+
   const existedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
@@ -77,6 +82,7 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     contactNumber,
     address,
+    role,
   });
 
   const createdUser = await User.findById(user._id);
@@ -87,12 +93,27 @@ const registerUser = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered Successfully"));
+    .json(
+      new ApiResponse(
+        200, 
+        {
+          user: createdUser,
+          isAdmin: createdUser.role === "admin"
+        }, 
+        "User registered Successfully"
+      )
+    );
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-  const userData = await User.find();
-  res.json(userData);
+  const users = await User.find().select("-password -refreshToken");
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { users },
+      "Users fetched successfully"
+    )
+  );
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -154,6 +175,7 @@ const loginUser = asyncHandler(async (req, res) => {
           user: loggedInUser,
           accessToken,
           refreshToken,
+          isAdmin: loggedInUser.role === "admin"
         },
         "User logged in successfully"
       )
@@ -219,6 +241,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const { accessToken, newRefreshToken } =
       await generateAccessAndRefereshTokens(user._id);
 
+    // Get user with updated refresh token
+    const updatedUser = await User.findById(user._id);
+
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
@@ -226,7 +251,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken: newRefreshToken },
+          { 
+            accessToken, 
+            refreshToken: newRefreshToken,
+            isAdmin: updatedUser.role === "admin"
+          },
           "Access token refreshed"
         )
       );

@@ -30,3 +30,10 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
     throw new ApiError(401, error?.message || "Invalid access token");
   }
 });
+
+export const verifyAdmin = asyncHandler(async (req, _, next) => {
+  if (req.user.role !== "admin") {
+    throw new ApiError(403, "You are not authorized to access this resource");
+  }
+  next();
+});
